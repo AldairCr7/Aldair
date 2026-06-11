@@ -1041,3 +1041,54 @@ h1 {
         min-height: 50px;
     }
 }
+
+/* Ajuste específico para que el botón No no trabe el teléfono */
+.letter-window {
+    overflow: hidden;
+}
+
+.no-wrapper {
+    flex-shrink: 0;
+}
+
+.no-btn {
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.no-btn.escaped {
+    position: absolute !important;
+    z-index: 300;
+    animation: none !important;
+    transform: none !important;
+    transition: left 0.16s ease, top 0.16s ease;
+}
+
+.no-btn.escaped:hover,
+.no-btn.escaped:active {
+    transform: none !important;
+    filter: none !important;
+}
+
+@media (max-width: 520px) {
+    .modal-box {
+        width: calc(100vw - 28px);
+        max-height: 88svh;
+        overflow-y: auto;
+    }
+
+    .modal-box h2 {
+        font-size: 28px;
+        line-height: 1.05;
+    }
+
+    .modal-box p {
+        font-size: 16px;
+        line-height: 1.35;
+    }
+
+    .modal-box button {
+        width: 100%;
+        white-space: normal;
+    }
+}

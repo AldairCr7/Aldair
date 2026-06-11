@@ -18,10 +18,12 @@ const ntfyUrl = `https://ntfy.sh/${ntfyTopic}`;
 let notificationSent = false;
 let accepted = false;
 let lastNoActionTime = 0;
-let noButtonMovedToCard = false;
+let noButtonIsReady = false;
 
-const noActionCooldown = 230;
+const noActionCooldown = 260;
 const safePadding = 28;
+
+const supportsHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
 function showModal(title, text, icon = "🥤") {
     modalTitle.textContent = title;
@@ -43,8 +45,8 @@ function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
 }
 
-function prepareNoButtonEscape() {
-    if (noButtonMovedToCard) return;
+function prepareNoButton() {
+    if (noButtonIsReady) return;
 
     const buttonRect = noBtn.getBoundingClientRect();
     const boxRect = escapeBox.getBoundingClientRect();
@@ -52,14 +54,27 @@ function prepareNoButtonEscape() {
     noWrapper.style.width = `${buttonRect.width}px`;
     noWrapper.style.height = `${buttonRect.height}px`;
 
+    const startLeft = buttonRect.left - boxRect.left;
+    const startTop = buttonRect.top - boxRect.top;
+
     escapeBox.appendChild(noBtn);
 
     noBtn.classList.add("escaped");
+    noBtn.style.left = `${startLeft}px`;
+    noBtn.style.top = `${startTop}px`;
 
-    noBtn.style.left = `${buttonRect.left - boxRect.left}px`;
-    noBtn.style.top = `${buttonRect.top - boxRect.top}px`;
+    noButtonIsReady = true;
 
-    noButtonMovedToCard = true;
+    requestAnimationFrame(() => {
+        placeNoInsideCard();
+    });
+}
+
+function syncNoPlaceholder() {
+    if (!noButtonIsReady) return;
+
+    noWrapper.style.width = `${noBtn.offsetWidth}px`;
+    noWrapper.style.height = `${noBtn.offsetHeight}px`;
 }
 
 function getSafeNoPositionInsideCard() {
@@ -88,7 +103,7 @@ function getSafeNoPositionInsideCard() {
 }
 
 function placeNoInsideCard() {
-    if (!noBtn.classList.contains("escaped")) return;
+    if (!noButtonIsReady) return;
 
     const buttonWidth = noBtn.offsetWidth;
     const buttonHeight = noBtn.offsetHeight;
@@ -113,6 +128,8 @@ function placeNoInsideCard() {
 }
 
 function moveNoButton() {
+    prepareNoButton();
+
     const now = Date.now();
 
     if (now - lastNoActionTime < noActionCooldown) {
@@ -120,8 +137,6 @@ function moveNoButton() {
     }
 
     lastNoActionTime = now;
-
-    prepareNoButtonEscape();
 
     const newPosition = getSafeNoPositionInsideCard();
 
@@ -137,6 +152,19 @@ function moveNoButton() {
     } else {
         message.textContent = "La opción No no está disponible.";
     }
+}
+
+function moveNoButtonAfterTouch(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    /*
+        En teléfono no lo movemos dentro del mismo toque.
+        Lo mandamos al siguiente frame para que no se sienta trabado.
+    */
+    requestAnimationFrame(() => {
+        moveNoButton();
+    });
 }
 
 async function sendNotification() {
@@ -211,16 +239,13 @@ function acceptPlan() {
     yesBtn.disabled = true;
 
     /*
-        IMPORTANTE:
-        Ya no desactivamos el botón No.
+        El No NO se desactiva.
         Así puede seguir moviéndose después de aceptar.
     */
     noBtn.disabled = false;
 
     yesBtn.querySelector(".btn-text").textContent = "Aceptado";
     yesBtn.querySelector(".btn-emoji").textContent = "💗";
-
-    noBtn.innerHTML = "<span>No</span>";
 
     message.textContent = "Listo. Aldair ya fue notificado.";
 
@@ -245,16 +270,24 @@ function acceptPlan() {
     }
 }
 
+/*
+    PC:
+    Solo se mueve cuando el cursor pasa encima.
+
+    Teléfono:
+    Solo se mueve cuando intentan tocarlo.
+
+    Click:
+    Si lo atrapan, no hace nada.
+*/
+
 noBtn.addEventListener("mouseenter", function() {
+    if (!supportsHover) return;
     moveNoButton();
 });
 
-noBtn.addEventListener("pointerdown", function(event) {
-    if (event.pointerType === "touch" || event.pointerType === "pen") {
-        event.preventDefault();
-        event.stopPropagation();
-        moveNoButton();
-    }
+noBtn.addEventListener("touchstart", moveNoButtonAfterTouch, {
+    passive: false
 });
 
 noBtn.addEventListener("click", function(event) {
@@ -292,5 +325,21 @@ modal.addEventListener("click", function(event) {
 });
 
 window.addEventListener("resize", function() {
+    syncNoPlaceholder();
     placeNoInsideCard();
+});
+
+window.addEventListener("orientationchange", function() {
+    setTimeout(() => {
+        syncNoPlaceholder();
+        placeNoInsideCard();
+    }, 300);
+});
+
+/*
+    Prepararlo desde el inicio evita que en teléfono se reacomode
+    todo justo cuando presionan el botón No.
+*/
+requestAnimationFrame(() => {
+    prepareNoButton();
 });
