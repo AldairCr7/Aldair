@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Una pregunta importante</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="background">
+        <div class="gradient-orb orb-one"></div>
+        <div class="gradient-orb orb-two"></div>
+        <div class="gradient-orb orb-three"></div>
+
+        <div class="floating-shape heart h1">♡</div>
+        <div class="floating-shape heart h2">♡</div>
+        <div class="floating-shape heart h3">♡</div>
+        <div class="floating-shape heart h4">♡</div>
+
+        <div class="floating-shape star s1">✦</div>
+        <div class="floating-shape star s2">✧</div>
+        <div class="floating-shape star s3">✦</div>
+    </div>
+
+    <main class="app">
+        <section class="letter-window open">
+            <div class="shine"></div>
+
+            <div class="top-badge">
+                <span>🥤</span>
+                <span>Invitación oficial</span>
+                <span>💗</span>
+            </div>
+
+            <div class="envelope-icon">
+                <div class="envelope-flap"></div>
+                <div class="envelope-body">💌</div>
+            </div>
+
+            <h1>Ximena</h1>
+
+            <p class="question">
+                ¿Quieres ir por un <span>frappé</span> el jueves cuando salgamos?
+            </p>
+
+            <p class="subquestion">
+                Prometo buena compañía, buen chisme y el frappé que tú quieras.
+            </p>
+
+            <div class="buttons">
+                <button class="btn yes-btn" id="yesBtn">
+                    <span class="btn-glow"></span>
+                    <span class="btn-text">Sí, jalo</span>
+                    <span class="btn-emoji">✨</span>
+                </button>
+
+                <div class="no-wrapper">
+                    <button class="btn no-btn" id="noBtn">
+                        <span>No</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="message" id="message">
+                Elige sabiamente. El universo está mirando.
+            </div>
+
+            <div class="tiny-note">
+                Spoiler: la opción correcta brilla más.
+            </div>
+        </section>
+    </main>
+
+    <div class="modal" id="modal">
+        <div class="modal-box">
+            <div class="modal-sparkle sparkle-one">✦</div>
+            <div class="modal-sparkle sparkle-two">✧</div>
+            <div class="modal-sparkle sparkle-three">♡</div>
+
+            <div class="modal-icon" id="modalIcon">🥤</div>
+
+            <h2 id="modalTitle">Aceptación registrada</h2>
+
+            <p id="modalText">
+                Perfecto. Ya quedó confirmado el frappé.
+            </p>
+
+            <button id="closeModal">
+                Está bien bonito
+            </button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">
+        <span>💌</span>
+        <p>Notificación enviada</p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
