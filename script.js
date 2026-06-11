@@ -13,27 +13,12 @@ const toast = document.getElementById("toast");
 const ntfyTopic = "Alerta-Aldair-Frappes-928471";
 const ntfyUrl = `https://ntfy.sh/${ntfyTopic}`;
 
-let noAttempts = 0;
 let notificationSent = false;
-let noButtonInterval = null;
+let accepted = false;
+let lastNoActionTime = 0;
 
-const noMessages = [
-    "Uy, casi. Pero el destino dijo que no.",
-    "La opción No se fue a terapia.",
-    "Error 404: rechazo no encontrado.",
-    "El universo bloqueó esa opción.",
-    "Ese botón no tiene permisos para existir.",
-    "Mejor el Sí, tiene mejores prestaciones.",
-    "No disponible por mantenimiento emocional.",
-    "El frappé exige una respuesta positiva.",
-    "No se puede cancelar lo que ya estaba escrito.",
-    "Ese No acaba de renunciar.",
-    "El No está fuera de cobertura.",
-    "La NASA confirmó que ese botón no existe.",
-    "Ese botón tiene miedo al compromiso.",
-    "No autorizado por el comité del frappé.",
-    "Demasiado tarde, el Sí ya ganó."
-];
+const screenPadding = 18;
+const noActionCooldown = 180;
 
 function showModal(title, text, icon = "🥤") {
     modalTitle.textContent = title;
@@ -51,40 +36,110 @@ function showToast(text) {
     }, 2600);
 }
 
-function moveNoButton() {
-    noAttempts++;
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
 
-    noBtn.classList.add("escaped");
+function getViewportBox() {
+    const viewport = window.visualViewport;
+
+    if (viewport) {
+        return {
+            width: viewport.width,
+            height: viewport.height,
+            left: viewport.offsetLeft,
+            top: viewport.offsetTop
+        };
+    }
+
+    return {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        left: 0,
+        top: 0
+    };
+}
+
+function getSafeNoPosition() {
+    const viewport = getViewportBox();
 
     const buttonWidth = noBtn.offsetWidth;
     const buttonHeight = noBtn.offsetHeight;
 
-    const padding = 18;
+    const minX = viewport.left + screenPadding;
+    const minY = viewport.top + screenPadding;
 
-    const maxX = window.innerWidth - buttonWidth - padding;
-    const maxY = window.innerHeight - buttonHeight - padding;
+    const maxX = viewport.left + viewport.width - buttonWidth - screenPadding;
+    const maxY = viewport.top + viewport.height - buttonHeight - screenPadding;
 
-    const randomX = Math.floor(Math.random() * Math.max(maxX, 1)) + 5;
-    const randomY = Math.floor(Math.random() * Math.max(maxY, 1)) + 5;
+    const safeMaxX = Math.max(minX, maxX);
+    const safeMaxY = Math.max(minY, maxY);
 
-    noBtn.style.left = `${randomX}px`;
-    noBtn.style.top = `${randomY}px`;
+    const x = Math.random() * (safeMaxX - minX) + minX;
+    const y = Math.random() * (safeMaxY - minY) + minY;
 
-    message.textContent = noMessages[noAttempts % noMessages.length];
-
-    if (noAttempts % 8 === 0) {
-        showToast("El botón No sigue huyendo");
-    }
+    return {
+        x: clamp(x, minX, safeMaxX),
+        y: clamp(y, minY, safeMaxY)
+    };
 }
 
-function startNoButtonEscape() {
-    if (noButtonInterval !== null) return;
+function placeNoInsideScreen() {
+    if (!noBtn.classList.contains("escaped")) return;
+
+    const viewport = getViewportBox();
+
+    const buttonWidth = noBtn.offsetWidth;
+    const buttonHeight = noBtn.offsetHeight;
+
+    const minX = viewport.left + screenPadding;
+    const minY = viewport.top + screenPadding;
+
+    const maxX = viewport.left + viewport.width - buttonWidth - screenPadding;
+    const maxY = viewport.top + viewport.height - buttonHeight - screenPadding;
+
+    const safeMaxX = Math.max(minX, maxX);
+    const safeMaxY = Math.max(minY, maxY);
+
+    const currentPosition = noBtn.getBoundingClientRect();
+
+    const fixedX = clamp(currentPosition.left, minX, safeMaxX);
+    const fixedY = clamp(currentPosition.top, minY, safeMaxY);
+
+    noBtn.style.left = `${fixedX}px`;
+    noBtn.style.top = `${fixedY}px`;
+}
+
+function moveNoButton() {
+    if (accepted) return;
+
+    noBtn.classList.add("escaped");
+
+    const newPosition = getSafeNoPosition();
+
+    noBtn.style.left = `${newPosition.x}px`;
+    noBtn.style.top = `${newPosition.y}px`;
+
+    message.textContent = "La opción No no está disponible.";
+}
+
+function handleNoEscape(event) {
+    if (accepted) return;
+
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const now = Date.now();
+
+    if (now - lastNoActionTime < noActionCooldown) {
+        return;
+    }
+
+    lastNoActionTime = now;
 
     moveNoButton();
-
-    noButtonInterval = setInterval(() => {
-        moveNoButton();
-    }, 850);
 }
 
 async function sendNotification() {
@@ -151,27 +206,65 @@ function celebrate() {
     }
 }
 
-noBtn.addEventListener("mouseenter", startNoButtonEscape);
+async function acceptPlan() {
+    if (accepted) return;
 
-noBtn.addEventListener("touchstart", function(event) {
-    event.preventDefault();
-    startNoButtonEscape();
-});
+    accepted = true;
 
-noBtn.addEventListener("focus", startNoButtonEscape);
+    yesBtn.disabled = true;
+    noBtn.disabled = true;
 
-noBtn.addEventListener("click", function() {
+    noBtn.classList.add("captured");
+    noBtn.innerHTML = "<span>No disponible</span>";
+
+    yesBtn.querySelector(".btn-text").textContent = "Aceptado";
+    yesBtn.querySelector(".btn-emoji").textContent = "💗";
+
+    message.textContent = "Listo. Aldair ya fue notificado.";
+
+    try {
+        if (!notificationSent) {
+            await sendNotification();
+            notificationSent = true;
+            showToast("Aldair ya recibió la notificación");
+        }
+    } catch (error) {
+        showToast("Aceptó, pero falló la notificación");
+        console.error(error);
+    }
+
+    celebrate();
+
     showModal(
-        "Gracias por aceptar",
-        "Lo sentimos, la opción “No” fue eliminada por falta de pruebas. Entonces queda confirmado el frappé.",
-        "😌"
+        "Aceptación registrada",
+        "Perfecto. Ya quedó confirmado el frappé. Favor de presentarse con antojo y ganas de pasarla bonito.",
+        "🥤"
     );
+}
 
-    message.textContent = "Técnicamente eso cuenta como un Sí.";
+/*
+    El botón No solo se mueve con:
+    - mouseenter: cuando el cursor pasa por encima
+    - touchstart: cuando lo intentan tocar en teléfono
+
+    Si logran darle click, no hace nada.
+*/
+
+noBtn.addEventListener("mouseenter", handleNoEscape);
+
+noBtn.addEventListener("touchstart", handleNoEscape, {
+    passive: false
 });
 
-yesBtn.addEventListener("click", async function() {
-    if (notificationSent) {
+noBtn.addEventListener("click", function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // No hace absolutamente nada.
+});
+
+yesBtn.addEventListener("click", function() {
+    if (accepted) {
         showModal(
             "Ya estaba confirmado",
             "No hace falta presionar dos veces. El frappé ya fue oficialmente aprobado.",
@@ -184,40 +277,7 @@ yesBtn.addEventListener("click", async function() {
     yesBtn.querySelector(".btn-text").textContent = "Enviando...";
     message.textContent = "Mandando notificación al patrón...";
 
-    try {
-        await sendNotification();
-
-        notificationSent = true;
-
-        yesBtn.querySelector(".btn-text").textContent = "Aceptado";
-        yesBtn.querySelector(".btn-emoji").textContent = "💗";
-
-        message.textContent = "Listo. Aldair ya fue notificado.";
-
-        showToast("Aldair ya recibió la notificación");
-        celebrate();
-
-        showModal(
-            "Aceptación registrada",
-            "Perfecto. Ya quedó confirmado el frappé. Favor de presentarse con antojo y ganas de pasarla bonito.",
-            "🥤"
-        );
-
-    } catch (error) {
-        yesBtn.disabled = false;
-        yesBtn.querySelector(".btn-text").textContent = "Sí, jalo";
-        yesBtn.querySelector(".btn-emoji").textContent = "✨";
-
-        message.textContent = "No se pudo mandar la notificación.";
-
-        showModal(
-            "Algo falló",
-            "La respuesta fue Sí, pero no se pudo mandar la notificación. Revisa internet o el topic de ntfy.",
-            "⚠️"
-        );
-
-        console.error(error);
-    }
+    acceptPlan();
 });
 
 closeModal.addEventListener("click", function() {
@@ -231,11 +291,11 @@ modal.addEventListener("click", function(event) {
 });
 
 window.addEventListener("resize", function() {
-    if (noBtn.classList.contains("escaped")) {
-        moveNoButton();
-    }
+    placeNoInsideScreen();
 });
 
-setTimeout(() => {
-    startNoButtonEscape();
-}, 1200);
+if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", function() {
+        placeNoInsideScreen();
+    });
+}
